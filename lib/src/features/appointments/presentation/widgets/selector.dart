@@ -18,13 +18,13 @@ class SelectorPanel extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           CustomRadioButton(
-            index: 0,
-            onPressed: () => vm.activateSubtractionOperation(),
+            dateOp: DateOp.subtract,
+            onPressed: () => vm.setOperation(DateOp.subtract),
           ),
           TodayDisplay(),
           CustomRadioButton(
-            index: 1,
-            onPressed: () => vm.activateAdditionOperation(),
+            dateOp: DateOp.add,
+            onPressed: () => vm.setOperation(DateOp.add),
           ),
         ],
       ),
@@ -63,12 +63,12 @@ class TodayDisplay extends StatelessWidget {
 
 class CustomRadioButton extends StatelessWidget {
   final VoidCallback onPressed;
-  final int index;
+  final DateOp dateOp;
 
   const CustomRadioButton({
     super.key,
     required this.onPressed,
-    required this.index,
+    required this.dateOp,
   });
 
   @override
@@ -91,11 +91,11 @@ class CustomRadioButton extends StatelessWidget {
           child: Container(
             margin: EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: index == vm.index ? Colors.white : AppColors.gray,
+              color: dateOp == vm.operation ? Colors.white : AppColors.gray,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: index == vm.index ? Colors.white : AppColors.gray,
+                  color: dateOp == vm.operation ? Colors.white : AppColors.gray,
                   blurRadius: 3.0,
                   spreadRadius: 1.0,
                   offset: Offset(0, 1),

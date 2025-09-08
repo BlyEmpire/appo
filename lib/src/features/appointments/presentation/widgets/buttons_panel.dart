@@ -1,5 +1,4 @@
 import 'package:appo/src/core/constants/colors.dart';
-import 'package:appo/src/core/enums/time_unit.dart';
 import 'package:appo/src/core/utils/responsive.dart';
 import 'package:appo/src/features/appointments/presentation/view_models/appointment_screen_vm.dart';
 import 'package:flutter/material.dart';
@@ -12,16 +11,16 @@ class ButtonsPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: TimeUnit.values
-          .map((timeUnit) => PanelButtonList(timeUnit: timeUnit))
+      children: DeltaUnit.values
+          .map((timeUnit) => PanelButtonList(deltaUnit: timeUnit))
           .toList(),
     );
   }
 }
 
 class PanelButtonList extends StatelessWidget {
-  final TimeUnit timeUnit;
-  const PanelButtonList({super.key, required this.timeUnit});
+  final DeltaUnit deltaUnit;
+  const PanelButtonList({super.key, required this.deltaUnit});
 
   @override
   Widget build(BuildContext context) {
@@ -30,14 +29,15 @@ class PanelButtonList extends StatelessWidget {
     // timeUnit.name ==
 
     return Column(
-      children: timeUnit.intervals.map((number) {
+      children: deltaUnit.intervals.map((number) {
         final isLast = number.isNegative;
 
         return PanelButton(
           number: number,
           isLast: isLast,
           onPressed: () {
-            viewModel.updateValue(type: timeUnit.name, number: number);
+            // viewModel.updateValue(type: timeUnit.name, number: number);
+            viewModel.bump(deltaUnit, number);
           },
         );
       }).toList(),

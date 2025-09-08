@@ -11,7 +11,7 @@ class PeriodDisplay extends StatelessWidget {
   Widget build(BuildContext context) {
     final vm = context.watch<AppointmentScreenVm>();
     return InkWell(
-      onTap: () => vm.resetDate(),
+      onTap: () => vm.reset(),
       child: Container(
         margin: EdgeInsets.all(8.0),
         decoration: BoxDecoration(

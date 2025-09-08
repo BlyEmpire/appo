@@ -6,8 +6,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:provider/provider.dart';
 
-class AppointmentTitle extends StatelessWidget {
+class AppointmentTitle extends StatefulWidget {
   const AppointmentTitle({super.key});
+
+  @override
+  State<AppointmentTitle> createState() => _AppointmentTitleState();
+}
+
+class _AppointmentTitleState extends State<AppointmentTitle> {
+  @override
+  void initState() {
+    super.initState();
+    context.read<AppointmentScreenVm>().initialize();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +53,7 @@ class AppointmentTitle extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text("No Information on day"),
+                  Text(vm.holiday?.name ?? "No Holiday"),
                 ],
               ),
             ),
