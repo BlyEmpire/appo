@@ -49,3 +49,6 @@ app.*.map.json
 /linux
 /web
 /windows
+
+
+/appo-release.jks
