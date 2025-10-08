@@ -1,175 +1,189 @@
-//
-
 import 'dart:math';
 
+import 'package:appo/src/core/enums/time_unit.dart';
+import 'package:appo/src/features/appointments/domain/services/zambian_holiday_service.dart';
 import 'package:flutter/widgets.dart';
 import 'package:appo/src/core/extension/date_time_extension.dart';
 import 'package:appo/src/features/appointments/domain/entities/holiday.dart';
 
-enum DateOp { add, subtract }
-
-// enum DeltaUnit { days, months, years }
-
-enum DeltaUnit {
-  days(name: "days", intervals: [30, 7, 1, -1]),
-  months(name: "months", intervals: [6, 3, 1, -1]),
-  years(name: "years", intervals: [10, 5, 1, -1]);
-
-  final String name;
-  final List<int> intervals;
-
-  const DeltaUnit({required this.name, required this.intervals});
-}
-
 class AppointmentScreenVm extends ChangeNotifier {
+  static const int _weekWindowSize = 2; // Days before/after center date
+  static const int _weekListLength = 5; // Total days in week list
+
   final ZambianHolidayService _holidayService;
-  final DateTime _startDate; // injected clock for testability
 
-  // Mutable state
-  DateOp _op = DateOp.add;
-  int _days = 0;
-  int _months = 0;
-  int _years = 0;
+  // Mutable state with clear grouping
+  late DateTime _startDate;
+  late DateTime _calculatedDate;
 
-  DateTime _calculatedDate;
+  // Date adjustment components
+  DateOperation _operation = DateOperation.add;
+  int _daysToAdjust = 0;
+  int _monthsToAdjust = 0;
+  int _yearsToAdjust = 0;
+
+  // Holiday-related state
   List<Holiday> _holidaysForYear = [];
-  int? _holidaysYear; // the year we last fetched for
-  Holiday? _holiday;
+  int? _cachedHolidaysYear;
+  Holiday? _currentHoliday;
 
   AppointmentScreenVm({
     required ZambianHolidayService zambianHolidayService,
     DateTime? startDate,
-  }) : _holidayService = zambianHolidayService,
-       _startDate = startDate ?? DateTime.now(),
-       _calculatedDate = startDate ?? DateTime.now() {
-    _refresh(); // initialize derived state once
+  }) : _holidayService = zambianHolidayService {
+    _initializeState(startDate);
   }
 
-  // ===== Getters
-  int get days => _days;
-  int get months => _months;
-  int get years => _years;
-  DateOp get operation => _op;
-
+  // ===== Public Getters =====
+  int get days => _daysToAdjust;
+  int get months => _monthsToAdjust;
+  int get years => _yearsToAdjust;
+  DateOperation get operation => _operation;
+  DateTime get startDate => _startDate;
   DateTime get todaysDate => _startDate;
   DateTime get calculatedDate => _calculatedDate;
-  Holiday? get holiday => _holiday;
-  bool get isHoliday => _holiday != null;
+  Holiday? get holiday => _currentHoliday;
+  bool get isHoliday => _currentHoliday != null;
 
-  /// A centered week around `calculatedDate`: [-2, -1, 0, 1, 2]
+  /// A centered week around calculatedDate: [-2, -1, 0, 1, 2]
   List<DateTime> get listWeek => List<DateTime>.generate(
-    5,
-    (i) => _calculatedDate.add(Duration(days: i - 2)),
+    _weekListLength,
+    (index) => _calculatedDate.add(Duration(days: index - _weekWindowSize)),
   );
 
-  // ===== Public API
+  // ===== Public API =====
 
-  /// Switch between adding or subtracting from the start date.
-  void setOperation(DateOp op) {
-    if (_op == op) return;
-    _op = op;
-    _refresh();
+  void updateDate({required DateTime newDate}) {
+    _startDate = newDate;
+    _recalculateAndUpdate();
   }
 
-  /// Reset all adjustments and go back to the start date.
+  void setOperation(DateOperation operation) {
+    if (_operation == operation) return;
+
+    _operation = operation;
+    _recalculateAndUpdate();
+  }
+
   void reset() {
-    _op = DateOp.add;
-    _days = 0;
-    _months = 0;
-    _years = 0;
+    _operation = DateOperation.add;
+    _daysToAdjust = 0;
+    _monthsToAdjust = 0;
+    _yearsToAdjust = 0;
+    _startDate = DateTime.now();
     _calculatedDate = _startDate;
-    _holiday = null;
-    // keep cached holidays; they’ll be reused if same year
+    _currentHoliday = null;
+    // Keep cached holidays for potential reuse
+
     notifyListeners();
   }
 
-  void initialize() => _refresh();
-
-  /// Increment/decrement a unit by `delta` (can be negative).
-  /// We clamp to non-negative since the operation (add/subtract) is chosen separately.
-  void bump(DeltaUnit unit, int delta) {
+  /// Adjusts a time unit by the given delta (can be positive or negative)
+  void adjustTimeUnit(DeltaUnit unit, int delta) {
     switch (unit) {
       case DeltaUnit.days:
-        _days = max(0, _days + delta);
+        _daysToAdjust = _clampToNonNegative(_daysToAdjust + delta);
         break;
       case DeltaUnit.months:
-        _months = max(0, _months + delta);
+        _monthsToAdjust = _clampToNonNegative(_monthsToAdjust + delta);
         break;
       case DeltaUnit.years:
-        _years = max(0, _years + delta);
+        _yearsToAdjust = _clampToNonNegative(_yearsToAdjust + delta);
         break;
     }
-    _refresh();
+
+    _recalculateAndUpdate();
   }
 
-  // ===== Internals
+  // ===== Private Implementation =====
 
-  void _refresh() {
+  void _initializeState(DateTime? startDate) {
+    final initialDate = startDate ?? DateTime.now();
+    _startDate = initialDate;
+    _calculatedDate = initialDate;
+
+    _refreshDerivedState();
+  }
+
+  void _recalculateAndUpdate() {
     _recalculateDate();
-    _ensureHolidaysForYear(_calculatedDate.year);
-    _holiday = _findHolidayOn(_calculatedDate);
+    _refreshDerivedState();
+  }
+
+  void _refreshDerivedState() {
+    _updateHolidayData();
+    _currentHoliday = _findHolidayOnDate(_calculatedDate);
+
     notifyListeners();
   }
 
   void _recalculateDate() {
-    if (_op == DateOp.add) {
-      _calculatedDate = _startDate.findNextDate(
-        days: _days,
-        months: _months,
-        years: _years,
-      );
-    } else {
-      _calculatedDate = _startDate.findPreviousDate(
-        days: _days,
-        months: _months,
-        years: _years,
-      );
+    _calculatedDate = _operation == DateOperation.add
+        ? _startDate.findNextDate(
+            days: _daysToAdjust,
+            months: _monthsToAdjust,
+            years: _yearsToAdjust,
+          )
+        : _startDate.findPreviousDate(
+            days: _daysToAdjust,
+            months: _monthsToAdjust,
+            years: _yearsToAdjust,
+          );
+  }
+
+  void _updateHolidayData() {
+    final targetYear = _calculatedDate.year;
+
+    if (_cachedHolidaysYear == targetYear && _holidaysForYear.isNotEmpty) {
+      return; // Already have holidays for this year
     }
+
+    _holidaysForYear = _holidayService.getHolidays(targetYear);
+    _cachedHolidaysYear = targetYear;
   }
 
-  void _ensureHolidaysForYear(int year) {
-    if (_holidaysYear == year && _holidaysForYear.isNotEmpty) return;
-    _holidaysForYear = _holidayService.getHolidays(year);
-    _holidaysYear = year;
-  }
-
-  Holiday? _findHolidayOn(DateTime date) {
-    // Try match on actual date first; then observed date if available.
-    final byActual = _firstWhereOrNull(
-      _holidaysForYear,
-      (h) => _isSameDate(_getHolidayDate(h), date),
+  Holiday? _findHolidayOnDate(DateTime date) {
+    // Check for exact date match first
+    final exactMatch = _findHolidayByCondition(
+      (holiday) => _datesMatch(_getHolidayDate(holiday), date),
     );
-    if (byActual != null) return byActual;
 
-    final byObserved = _firstWhereOrNull(_holidaysForYear, (h) {
-      final observed = _getObservedDate(h);
-      return observed != null && _isSameDate(observed, date);
+    if (exactMatch != null) return exactMatch;
+
+    // Check for observed date match
+    return _findHolidayByCondition((holiday) {
+      final observedDate = _getObservedDate(holiday);
+      return observedDate != null && _datesMatch(observedDate, date);
     });
-    return byObserved;
   }
 
-  // Helpers to handle potential nulls/different field names in Holiday
-  DateTime _getHolidayDate(Holiday h) {
-    // Adjust this if your entity uses a different field name
-    return h.date;
+  Holiday? _findHolidayByCondition(bool Function(Holiday) condition) {
+    for (final holiday in _holidaysForYear) {
+      if (condition(holiday)) {
+        return holiday;
+      }
+    }
+    return null;
   }
 
-  DateTime? _getObservedDate(Holiday h) {
-    // Adjust this if your entity uses a different field name or is optional
+  DateTime _getHolidayDate(Holiday holiday) => holiday.date;
+
+  DateTime? _getObservedDate(Holiday holiday) {
     try {
-      return h.date;
+      return holiday
+          .date; // Adjust if your Holiday entity has separate observed date
     } catch (_) {
       return null;
     }
   }
 
-  bool _isSameDate(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
+  bool _datesMatch(DateTime date1, DateTime date2) =>
+      date1.year == date2.year &&
+      date1.month == date2.month &&
+      date1.day == date2.day;
 
-  T? _firstWhereOrNull<T>(Iterable<T> items, bool Function(T) test) {
-    for (final item in items) {
-      if (test(item)) return item;
-    }
-    return null;
-  }
+  int _clampToNonNegative(int value) => max(0, value);
 }
+
+// // Renamed for clarity (assuming you can update the enum name)
+// enum DateOperation { add, subtract }

@@ -1,73 +1,39 @@
-class Holiday {
+import 'package:equatable/equatable.dart';
+
+/// Represents a public holiday with a name and the date it is observed.
+///
+/// This class is **immutable** and extends [Equatable] to allow easy
+/// comparison between instances.
+class Holiday extends Equatable {
+  /// The name of the holiday (e.g., "New Year's Day").
   final String _name;
+
+  /// The date on which the holiday is observed.
   final DateTime _observedDate;
 
+  /// Public getter for the holiday name.
   String get name => _name;
+
+  /// Public getter for the observed date of the holiday.
   DateTime get date => _observedDate;
 
-  Holiday({required String name, required DateTime observedDate})
+  /// Creates a [Holiday] instance with a [name] and the [observedDate].
+  ///
+  /// Both fields are required and immutable.
+  const Holiday({required String name, required DateTime observedDate})
     : _name = name,
       _observedDate = observedDate;
-}
 
-class ZambianHolidayService {
-  /// Returns a map of holiday name to DateTime for the given year.
-  // Map<String, DateTime> getHolidays(int year) {
-  List<Holiday> getHolidays(int year) {
-    final holidays = <String, DateTime>{};
+  /// Overrides [Equatable] props to allow object comparison.
+  ///
+  /// Two [Holiday] instances are considered equal if both their
+  /// `name` and `observedDate` are equal.
+  @override
+  List<Object?> get props => [_name, _observedDate];
 
-    // Fixed holidays
-    holidays["New Year's Day"] = DateTime(year, 1, 1);
-    holidays["International Women's Day"] = DateTime(year, 3, 8);
-    holidays["Kenneth Kaunda Day"] = DateTime(year, 4, 28);
-    holidays["Labour Day"] = DateTime(year, 5, 1);
-    holidays["Africa Freedom Day"] = DateTime(year, 5, 25);
-    holidays["Independence Day"] = DateTime(year, 10, 24);
-    holidays["National Prayer Day"] = DateTime(year, 10, 18);
-    holidays["Christmas Day"] = DateTime(year, 12, 25);
-    holidays["Boxing Day"] = DateTime(year, 12, 26);
-
-    // Movable holidays (Easter)
-    final easterSunday = _calculateEasterSunday(year);
-    holidays["Good Friday"] = easterSunday.subtract(const Duration(days: 2));
-    holidays["Easter Monday"] = easterSunday.add(const Duration(days: 1));
-
-    // Movable holidays (Heroes & Unity Day)
-    final heroesDay = _firstMondayOfJuly(year);
-    holidays["Heroes Day"] = heroesDay;
-    holidays["Unity Day"] = heroesDay.add(const Duration(days: 1));
-
-    return holidays.entries.map((entry) {
-      return Holiday(name: entry.key, observedDate: entry.value);
-    }).toList();
-  }
-
-  /// Calculate Easter Sunday for a given year using the "Computus" algorithm
-  DateTime _calculateEasterSunday(int year) {
-    // Meeus/Jones/Butcher algorithm
-    final a = year % 19;
-    final b = year ~/ 100;
-    final c = year % 100;
-    final d = b ~/ 4;
-    final e = b % 4;
-    final f = (b + 8) ~/ 25;
-    final g = (b - f + 1) ~/ 3;
-    final h = (19 * a + b - d - g + 15) % 30;
-    final i = c ~/ 4;
-    final k = c % 4;
-    final l = (32 + 2 * e + 2 * i - h - k) % 7;
-    final m = (a + 11 * h + 22 * l) ~/ 451;
-    final month = (h + l - 7 * m + 114) ~/ 31;
-    final day = ((h + l - 7 * m + 114) % 31) + 1;
-    return DateTime(year, month, day);
-  }
-
-  /// Find the first Monday of July for Heroes Day
-  DateTime _firstMondayOfJuly(int year) {
-    DateTime date = DateTime(year, 7, 1);
-    while (date.weekday != DateTime.monday) {
-      date = date.add(const Duration(days: 1));
-    }
-    return date;
-  }
+  /// Returns a readable string representation of the holiday.
+  ///
+  /// Example: "Holiday is New Year's Day and is observed on 2025-01-01 00:00:00.000"
+  @override
+  String toString() => "Holiday is $name and is observed on $_observedDate";
 }

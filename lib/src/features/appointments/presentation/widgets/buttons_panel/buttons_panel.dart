@@ -1,4 +1,5 @@
 import 'package:appo/src/core/constants/colors.dart';
+import 'package:appo/src/core/enums/time_unit.dart';
 import 'package:appo/src/core/utils/responsive.dart';
 import 'package:appo/src/features/appointments/presentation/view_models/appointment_screen_vm.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +11,7 @@ class ButtonsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: DeltaUnit.values
           .map((timeUnit) => PanelButtonList(deltaUnit: timeUnit))
           .toList(),
@@ -26,8 +27,6 @@ class PanelButtonList extends StatelessWidget {
   Widget build(BuildContext context) {
     final viewModel = context.watch<AppointmentScreenVm>();
 
-    // timeUnit.name ==
-
     return Column(
       children: deltaUnit.intervals.map((number) {
         final isLast = number.isNegative;
@@ -37,7 +36,7 @@ class PanelButtonList extends StatelessWidget {
           isLast: isLast,
           onPressed: () {
             // viewModel.updateValue(type: timeUnit.name, number: number);
-            viewModel.bump(deltaUnit, number);
+            viewModel.adjustTimeUnit(deltaUnit, number);
           },
         );
       }).toList(),
@@ -61,7 +60,7 @@ class PanelButton extends StatelessWidget {
   Widget build(BuildContext context) {
     Responsive.init(context: context);
 
-    return InkWell(
+    return GestureDetector(
       onTap: onPressed,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
