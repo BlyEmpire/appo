@@ -19,7 +19,8 @@ workflows:
     artifacts:
       - build/app/outputs/bundle/release/app-release.aab
     publishing:
-      google-play:
-        credentials: $GOOGLE_PLAY_JSON_KEY
-        track: internal
-        artifact_path: build/app/outputs/bundle/release/app-release.aab
+      android:
+        google-play:
+          credentials: $GOOGLE_PLAY_JSON_KEY
+          track: internal
+          artifact_path: build/app/outputs/bundle/release/app-release.aab
