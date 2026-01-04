@@ -1,4 +1,4 @@
-package com.example.appo
+package com.blackbraincube.appo
 
 import io.flutter.embedding.android.FlutterActivity
 

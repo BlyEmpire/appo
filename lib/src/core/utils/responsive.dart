@@ -26,8 +26,8 @@ class ResponsiveLayout extends StatelessWidget {
 
 class Responsive {
   /// statice screen size
-  static late double screenWidth;
-  static late double screenHeight;
+  static double screenWidth = 0.0;
+  static double screenHeight = 0.0;
 
   /// Device Type
   static late DeviceType deviceType;
